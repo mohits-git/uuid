@@ -12,7 +12,6 @@ _CLEARFLAG_MASK = ~((0xf000c << 60))
 _VARIANT_FLAGS = (0x8 << 60)
 # 128 bit flags to set version bits for variant 10xx
 _VERSION_1_FLAGS = (0x10008 << 60)
-_VERSION_2_FLAGS = (0x20008 << 60)
 _VERSION_3_FLAGS = (0x30008 << 60)
 _VERSION_4_FLAGS = (0x40008 << 60)
 _VERSION_5_FLAGS = (0x50008 << 60)
@@ -95,7 +94,9 @@ def uuidv1(clock_seq=None, node=None):
         node = _random_node()
     uuid_int = (time_low << 96) | (time_mid << 80) | (
         time_hi_version << 64) | (clock_seq << 48) | (node)
-    return UUID(int=uuid_int, version=1)
+    uuid_int &= _CLEARFLAG_MASK
+    uuid_int |= _VERSION_1_FLAGS
+    return UUID(int=uuid_int)
 
 
 def uuidv3(namespace: UUID, name: bytes | str):
@@ -148,7 +149,9 @@ def uuidv6(clock_seq=None, node=None):
         node = _random_node()
     uuid_int = (time_hi_mid << 80) | (
         time_low << 64) | (clock_seq << 48) | (node & 0xffff_ffff_ffff)
-    return UUID(int=uuid_int, version=6)
+    uuid_int &= _CLEARFLAG_MASK
+    uuid_int |= _VERSION_6_FLAGS
+    return UUID(int=uuid_int)
 
 
 def _uuid_get_counter_and_tail():
@@ -192,7 +195,9 @@ def uuidv7():
     uuid_int |= counter_lo << 32
     uuid_int |= tail
 
-    uuid = UUID(int=uuid_int, version=7)
+    uuid_int &= _CLEARFLAG_MASK
+    uuid_int |= _VERSION_7_FLAGS
+    uuid = UUID(int=uuid_int)
 
     _last_timestamp_v7 = timestamp
     _last_counter_v7 = counter
@@ -201,22 +206,27 @@ def uuidv7():
 
 def uuidv8(a=None, b=None, c=None):
     if a is None:
-        import random
-        a = random.getrandbits(48)
+        a = int_.from_bytes(os.urandom(6))
     if b is None:
-        import random
-        b = random.getrandbits(12)
+        b = int_.from_bytes(os.urandom(2))
     if c is None:
-        import random
-        c = random.getrandbits(62)
-    int_uuid_8 = (a & 0xffff_ffff_ffff) << 80
-    int_uuid_8 |= (b & 0xfff) << 64
-    int_uuid_8 |= c & 0x3fff_ffff_ffff_ffff
-    return UUID(int=int_uuid_8, version=8)
+        c = int_.from_bytes(os.urandom(8))
+    uuid_int = (a & 0xffff_ffff_ffff) << 80
+    uuid_int |= (b & 0xfff) << 64
+    uuid_int |= c & 0x3fff_ffff_ffff_ffff
+    uuid_int &= _CLEARFLAG_MASK
+    uuid_int |= _VERSION_8_FLAGS
+    return UUID(int=uuid_int, version=8)
+
+
+NAMESPACE_DNS = UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')
+NAMESPACE_URL = UUID('6ba7b811-9dad-11d1-80b4-00c04fd430c8')
+NAMESPACE_OID = UUID('6ba7b812-9dad-11d1-80b4-00c04fd430c8')
+NAMESPACE_X500 = UUID('6ba7b814-9dad-11d1-80b4-00c04fd430c8')
 
 
 def main():
-    uuid = uuidv7()
+    uuid = uuidv8()
     print(uuid)
 
 
